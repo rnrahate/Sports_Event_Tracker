@@ -241,8 +241,8 @@ def add_match(tournament_id, team1_id, team2_id, match_date):
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO Matches (tournament_id, team1_id, team2_id, match_date) VALUES (%s, %s, %s, %s)",
-            (tournament_id, team1_id, team2_id, match_date)
+            "INSERT INTO Matches (tournament_id, team1_id, team2_id, match_date, team1_score, team2_score, winner_id) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (tournament_id, team1_id, team2_id, match_date, None, None, None)  # Ensure scores are NULL
         )
         conn.commit()
     finally:
@@ -538,17 +538,19 @@ elif menu == "📅 Schedule Match":
             teams = get_teams(tournament_names[selected_tournament_name])
             if len(teams) < 2:
                 st.warning("⚠️ At least 2 teams are required to schedule a match!")
+                team1_name = team2_name = None
             else:
                 team_names = {t['name']: t['team_id'] for t in teams}
-                
                 team1_name = st.selectbox("🔴 Select Team 1", list(team_names.keys()))
-                team2_name = st.selectbox("🔵 Select Team 2", list(team_names.keys()))
+                # Remove team1 from team2 options
+                team2_options = [name for name in team_names.keys() if name != team1_name]
+                team2_name = st.selectbox("🔵 Select Team 2", team2_options)
         
         with col2:
             match_date = st.date_input("📅 Match Date", value=datetime.now().date())
             
             st.markdown("### 🆚 Match Preview")
-            if len(teams) >= 2 and team1_name != team2_name:
+            if len(teams) >= 2 and team1_name and team2_name and team1_name != team2_name:
                 st.markdown(f"""
                 **🔴 {team1_name}**  
                         VS  
@@ -556,13 +558,13 @@ elif menu == "📅 Schedule Match":
                 
                 📅 **Date:** {match_date}
                 """)
-            elif team1_name == team2_name:
+            elif team1_name == team2_name and team1_name is not None:
                 st.error("❌ Teams cannot play against themselves!")
         
         col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 1])
         with col_btn2:
             if st.button("📅 Schedule Match", use_container_width=True):
-                if len(teams) >= 2 and team1_name != team2_name:
+                if len(teams) >= 2 and team1_name and team2_name and team1_name != team2_name:
                     add_match(
                         tournament_names[selected_tournament_name],
                         team_names[team1_name],
